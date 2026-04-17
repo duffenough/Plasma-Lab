@@ -436,9 +436,11 @@ def main():
         
         # Create main plot
         plt.subplot(2, 1, 1)
-        plt.plot(T_range, S_values, 'b-', linewidth=2)
+        # Convert temperature axis from K -> C for plotting
+        T_plot = T_range - 273.15
+        plt.plot(T_plot, S_values, 'b-', linewidth=2)
         plt.grid(True)
-        plt.xlabel('Temperature (K)')
+        plt.xlabel('Temperature (°C)')
         plt.ylabel('Similarity Score S')
         
         ref_name = args.reference if args.reference else props.reference_salt
@@ -469,30 +471,34 @@ def main():
             ("tab:orange", "darkorange", "ooo", f"{args.surrogate} viscosity valid"),
         ]
 
-        # reference density
+        # reference density (convert K->C for plotting)
         if validity["reference"]["density"]:
-            T1, T2 = validity["reference"]["density"]
+            T1_k, T2_k = validity["reference"]["density"]
+            T1, T2 = T1_k - 273.15, T2_k - 273.15
             face, edge, hatch, label = styles[0]
             plt.axvspan(T1, T2, color=face, alpha=alpha, edgecolor=edge, linewidth=1.2, hatch=hatch, zorder=0)
             handles.append(mpatches.Patch(facecolor=face, edgecolor=edge, hatch=hatch, label=label))
 
         # reference viscosity
         if validity["reference"]["viscosity"]:
-            T1, T2 = validity["reference"]["viscosity"]
+            T1_k, T2_k = validity["reference"]["viscosity"]
+            T1, T2 = T1_k - 273.15, T2_k - 273.15
             face, edge, hatch, label = styles[1]
             plt.axvspan(T1, T2, color=face, alpha=alpha, edgecolor=edge, linewidth=1.2, hatch=hatch, zorder=0)
             handles.append(mpatches.Patch(facecolor=face, edgecolor=edge, hatch=hatch, label=label))
 
         # surrogate density
         if validity["surrogate"]["density"]:
-            T1, T2 = validity["surrogate"]["density"]
+            T1_k, T2_k = validity["surrogate"]["density"]
+            T1, T2 = T1_k - 273.15, T2_k - 273.15
             face, edge, hatch, label = styles[2]
             plt.axvspan(T1, T2, color=face, alpha=alpha, edgecolor=edge, linewidth=1.2, hatch=hatch, zorder=0)
             handles.append(mpatches.Patch(facecolor=face, edgecolor=edge, hatch=hatch, label=label))
 
         # surrogate viscosity
         if validity["surrogate"]["viscosity"]:
-            T1, T2 = validity["surrogate"]["viscosity"]
+            T1_k, T2_k = validity["surrogate"]["viscosity"]
+            T1, T2 = T1_k - 273.15, T2_k - 273.15
             face, edge, hatch, label = styles[3]
             plt.axvspan(T1, T2, color=face, alpha=alpha, edgecolor=edge, linewidth=1.2, hatch=hatch, zorder=0)
             handles.append(mpatches.Patch(facecolor=face, edgecolor=edge, hatch=hatch, label=label))
@@ -507,14 +513,17 @@ def main():
         present = [r for r in all_ranges if r is not None]
         intersection_range = None
         if present:
-            low = max(r[0] for r in present)
-            high = min(r[1] for r in present)
-            if low <= high:
-                intersection_range = (low, high)
+            low_k = max(r[0] for r in present)
+            high_k = min(r[1] for r in present)
+            if low_k <= high_k:
+                intersection_range = (low_k, high_k)
+                # convert to C for plotting
+                low_c = low_k - 273.15
+                high_c = high_k - 273.15
                 # vertical dashed lines at the boundaries and a faint shaded band
-                plt.axvline(low, color='k', linewidth=1.5, linestyle='--', zorder=1)
-                plt.axvline(high, color='k', linewidth=1.5, linestyle='--', zorder=1)
-                plt.axvspan(low, high, color='k', alpha=0.06, zorder=0)
+                plt.axvline(low_c, color='k', linewidth=1.5, linestyle='--', zorder=1)
+                plt.axvline(high_c, color='k', linewidth=1.5, linestyle='--', zorder=1)
+                plt.axvspan(low_c, high_c, color='k', alpha=0.06, zorder=0)
                 handles.append(Line2D([0], [0], color='k', lw=1.5, linestyle='--', label='All models valid'))
 
         # Find the temperature with highest similarity within the intersection
@@ -539,20 +548,21 @@ def main():
                 best_idx = idxs[sub_best]
                 best_T = T_range[best_idx]
                 best_S = S_values[best_idx]
-                best_label = f'Best within intersection: {best_T:.0f} K'
+                best_label = f'Best within intersection: {best_T-273.15:.0f} °C'
 
-        # Plot the best-point marker and add it to the legend handles
-        plt.plot(best_T, best_S, 'ro', markersize=8, zorder=5)
+        # Plot the best-point marker (convert to C) and add it to the legend handles
+        best_T_plot = best_T - 273.15
+        plt.plot(best_T_plot, best_S, 'ro', markersize=8, zorder=5)
         handles.append(Line2D([0], [0], marker='o', color='w', markerfacecolor='r', markersize=8, label=best_label))
 
         # Annotate the main axes with intersection summary and best S
         ax = plt.gca()
         if intersection_range is not None:
-            ax.text(0.02, 0.95, f'Intersection: {intersection_range[0]:.0f} - {intersection_range[1]:.0f} K', transform=ax.transAxes, fontsize=10, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.7))
-            ax.text(0.02, 0.88, f'Best S = {best_S:.3f} at {best_T:.0f} K', transform=ax.transAxes, fontsize=10, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.7))
+            ax.text(0.02, 0.95, f'Intersection: {intersection_range[0]-273.15:.0f} - {intersection_range[1]-273.15:.0f} °C', transform=ax.transAxes, fontsize=10, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.7))
+            ax.text(0.02, 0.88, f'Best S = {best_S:.3f} at {best_T-273.15:.0f} °C', transform=ax.transAxes, fontsize=10, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.7))
         else:
             ax.text(0.02, 0.95, 'Intersection: None', transform=ax.transAxes, fontsize=10, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.7))
-            ax.text(0.02, 0.88, f'Best S = {best_S:.3f} at {best_T:.0f} K', transform=ax.transAxes, fontsize=10, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.7))
+            ax.text(0.02, 0.88, f'Best S = {best_S:.3f} at {best_T-273.15:.0f} °C', transform=ax.transAxes, fontsize=10, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.7))
 
         plt.legend(handles=handles, bbox_to_anchor=(1.05, 1), loc='upper left')
         
